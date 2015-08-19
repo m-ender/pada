@@ -70,61 +70,29 @@ class Pada
         p @insns
         pc = 0
         while pc < @insns.size
-            insn, arg = *@insns[pc]
+            insn = @insns[pc]
 
-            case insn
-            when :push
-                push(arg)
-            when :dup
-                push(@stack[-1])
-            when :swap
-                y, x = pop, pop
-                push(y)
-                push(x)
-            when :rotate
-                z, y, x = pop, pop, pop
-                push(z)
-                push(x)
-                push(y)
-            when :pop
-                pop
+            command, bit = *@tree.process(insn)
 
-            when :+
-                y, x = pop, pop
-                push(x + y)
-            when :-
-                y, x = pop, pop
-                push(x - y)
-            when :*
-                y, x = pop, pop
-                push(x * y)
-            when :/
-                y, x = pop, pop
-                push(x / y)
-            when :%
-                y, x = pop, pop
-                push(x % y)
+            p insn
+            p [command, bit]
 
-            when :num_out
-                print pop
-            when :char_out
-                print pop.chr
-            when :char_in
-                push($stdin.getc.ord)
-            when :num_in
-                push($stdin.gets.to_i)
-
-            when :label
-                # ラベルの位置は既に調べてあるので、何もしない
-            when :jump
-                if pop != 0
-                    pc = @labels[arg]
-                    raise ProgramError, "ジャンプ先(#{arg.inspect})が見つかりません" if pc.nil?
-                end
-
-            else
-                raise "[BUG] 知らない命令です(#{insn})"
+            if bit
+                byte = @bits[bit, 8].map(&:state).join.to_i(2)
             end
+
+            case command
+            when :write
+                STDOUT << byte.chr
+            when :read
+                byte = STDIN.read(1).ord
+                8.times { |i| 
+                    @bits[bit + i].state = (byte>>(7-i))&1
+                }
+            when :skip, :jump
+                raise "[BUG] instruction not yet implemented: #{command}"
+            end
+
             pc += 1
         end
     end
@@ -139,37 +107,13 @@ class Pada
                 insns << OPERATORS[c]
             end
         end
-        
+
+        insns << :nop
+        insns << :nop
+        insns << :nop
+        insns << :nop
+
         insns
-    end
-
-    def select(ops, n)
-        op = ops[n % ops.size]
-        [op]
-    end
-
-    def find_labels(insns)
-        labels = {}
-        insns.each_with_index do |(insn, arg), i|
-            if insn == :label
-                raise ProgramError, "ラベル#{arg}が重複しています" if labels[arg]
-                labels[arg] = i
-            end
-        end
-        labels
-    end
-
-    def push(item)
-        unless item.is_a?(Integer)
-            raise ProgramError, "整数以外(#{item})をプッシュしようとしました" 
-        end
-        @stack.push(item)
-    end
-
-    def pop
-        item = @stack.pop
-        raise ProgramError, "空のスタックをポップしようとしました" if item.nil?
-        item
     end
 
 end
