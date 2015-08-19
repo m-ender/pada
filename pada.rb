@@ -1,155 +1,176 @@
 # coding: utf-8
 
+require_relative 'bit'
+require_relative 'switch'
+
 class Pada
 
-  class ProgramError < Exception; end
+    class ProgramError < Exception; end
 
-  OP_STACK = [:__dummy__, :dup, :swap, :rotate, :pop]
-  OP_CALC = [:+, :-, :*, :/, :%]
-  OP_OUTPUT = [:num_out, :char_out]
-  OP_INPUT = [:num_in, :char_in]
+    OPERATORS = {
+        # Switch manipulation
+        "O" => :swap_third,
+        "o" => :swap_second,
+        "." => :swap_first,
+        "Q" => :swap_three,
+        "q" => :swap_two,
 
-  def self.run(src)
-    new(src).run
-  end
+        # Bit manipulation
+        "1" => :set_1,
+        "0" => :set_0,
+        "~" => :toggle,
+        "v" => :push,
+        "^" => :pop,
 
-  def initialize(src)
-    @insns = parse(src)
-    @stack = []
-    @labels = find_labels(@insns)
-  end
+        # I/O
+        "w" => :write,
+        "r" => :read,
 
-  def run
-    #p @insns
-    #p @labels
-    pc = 0
-    while pc < @insns.size
-      insn, arg = *@insns[pc]
+        # Control flow
+        "#" => :lock,
+        "?" => :skip,
+        "*" => :jump,
+    }
 
-      case insn
-      when :push
-        push(arg)
-      when :dup
-        push(@stack[-1])
-      when :swap
-        y, x = pop, pop
-        push(y)
-        push(x)
-      when :rotate
-        z, y, x = pop, pop, pop
-        push(z)
-        push(x)
-        push(y)
-      when :pop
-        pop
+    def self.run(src)
+        new(src).run
+    end
 
-      when :+
-        y, x = pop, pop
-        push(x + y)
-      when :-
-        y, x = pop, pop
-        push(x - y)
-      when :*
-        y, x = pop, pop
-        push(x * y)
-      when :/
-        y, x = pop, pop
-        push(x / y)
-      when :%
-        y, x = pop, pop
-        push(x % y)
+    def initialize(src)
+        @insns = parse(src)
+        @bits = Array.new(8) { |i| Bit.new i }
+        # Repeat (by reference) for easier cyclic access
+        @bits *= 2   
 
-      when :num_out
-        print pop
-      when :char_out
-        print pop.chr
-      when :char_in
-        push($stdin.getc.ord)
-      when :num_in
-        push($stdin.gets.to_i)
+        @tree = Switch.new(
+                    Switch.new(
+                        Switch.new(
+                            @bits[0], 
+                            @bits[1]
+                        ),
+                        Switch.new(
+                            @bits[2], 
+                            @bits[3]
+                        )
+                    ),
+                    Switch.new(
+                        Switch.new(
+                            @bits[4], 
+                            @bits[5]
+                        ),
+                        Switch.new(
+                            @bits[6], 
+                            @bits[7]
+                        )
+                    )
+                )
+    end
 
-      when :label
-        # ラベルの位置は既に調べてあるので、何もしない
-      when :jump
-        if pop != 0
-          pc = @labels[arg]
-          raise ProgramError, "ジャンプ先(#{arg.inspect})が見つかりません" if pc.nil?
+    def run
+        p @insns
+        pc = 0
+        while pc < @insns.size
+            insn, arg = *@insns[pc]
+
+            case insn
+            when :push
+                push(arg)
+            when :dup
+                push(@stack[-1])
+            when :swap
+                y, x = pop, pop
+                push(y)
+                push(x)
+            when :rotate
+                z, y, x = pop, pop, pop
+                push(z)
+                push(x)
+                push(y)
+            when :pop
+                pop
+
+            when :+
+                y, x = pop, pop
+                push(x + y)
+            when :-
+                y, x = pop, pop
+                push(x - y)
+            when :*
+                y, x = pop, pop
+                push(x * y)
+            when :/
+                y, x = pop, pop
+                push(x / y)
+            when :%
+                y, x = pop, pop
+                push(x % y)
+
+            when :num_out
+                print pop
+            when :char_out
+                print pop.chr
+            when :char_in
+                push($stdin.getc.ord)
+            when :num_in
+                push($stdin.gets.to_i)
+
+            when :label
+                # ラベルの位置は既に調べてあるので、何もしない
+            when :jump
+                if pop != 0
+                    pc = @labels[arg]
+                    raise ProgramError, "ジャンプ先(#{arg.inspect})が見つかりません" if pc.nil?
+                end
+
+            else
+                raise "[BUG] 知らない命令です(#{insn})"
+            end
+            pc += 1
         end
-
-      else
-        raise "[BUG] 知らない命令です(#{insn})"
-      end
-      pc += 1
     end
-  end
 
-  private
+    private
 
-  def parse(src)
-    insns = []
+    def parse(src)
+        insns = []
 
-    spaces = 0
-    src.each_char do |c|
-      case c
-      when " "
-        spaces += 1
-      when "+"
-        raise ProgramError, "0個の空白のあとに+が続きました" if spaces == 0
-        if spaces < OP_STACK.size
-          insns << select(OP_STACK, spaces)
-        else
-          insns << [:push, spaces - OP_STACK.size]
+        src.each_char do |c|
+            if OPERATORS[c]
+                insns << OPERATORS[c]
+            end
         end
-        spaces = 0
-      when "*"
-        insns << select(OP_CALC, spaces)
-        spaces = 0
-      when "."
-        insns << select(OP_OUTPUT, spaces)
-        spaces = 0
-      when ","
-        insns << select(OP_INPUT, spaces)
-        spaces = 0
-      when "`"
-        insns << [:label, spaces]
-        spaces = 0
-      when "'"
-        insns << [:jump, spaces]
-        spaces = 0
-      end
+        
+        insns
     end
 
-    insns
-  end
-
-  def select(ops, n)
-    op = ops[n % ops.size]
-    [op]
-  end
-
-  def find_labels(insns)
-    labels = {}
-    insns.each_with_index do |(insn, arg), i|
-      if insn == :label
-        raise ProgramError, "ラベル#{arg}が重複しています" if labels[arg]
-        labels[arg] = i
-      end
+    def select(ops, n)
+        op = ops[n % ops.size]
+        [op]
     end
-    labels
-  end
 
-  def push(item)
-    unless item.is_a?(Integer)
-      raise ProgramError, "整数以外(#{item})をプッシュしようとしました" 
+    def find_labels(insns)
+        labels = {}
+        insns.each_with_index do |(insn, arg), i|
+            if insn == :label
+                raise ProgramError, "ラベル#{arg}が重複しています" if labels[arg]
+                labels[arg] = i
+            end
+        end
+        labels
     end
-    @stack.push(item)
-  end
 
-  def pop
-    item = @stack.pop
-    raise ProgramError, "空のスタックをポップしようとしました" if item.nil?
-    item
-  end
+    def push(item)
+        unless item.is_a?(Integer)
+            raise ProgramError, "整数以外(#{item})をプッシュしようとしました" 
+        end
+        @stack.push(item)
+    end
+
+    def pop
+        item = @stack.pop
+        raise ProgramError, "空のスタックをポップしようとしました" if item.nil?
+        item
+    end
 
 end
 
