@@ -10,18 +10,17 @@ class Bit
 
         @state = 0
         @stack = []
-        @insn = :nop
         @locked = false
     end
 
     def process(insn)
         result = :nop
-        #p [@index, @state, @insn]
+        #p [@index, @state, insn]
 
         new_state = @state
-        case @insn
+        case insn
         when :swap_third, :swap_second, :swap_first, :swap_three, :swap_two
-            raise "[BUG] Switch-manipulation command reached bits: #{@insn} on bit #{@index}"
+            raise "[BUG] Switch-manipulation command reached bits: #{insn} on bit #{@index}"
         when :set_1
             new_state = 1
         when :set_0
@@ -45,8 +44,6 @@ class Bit
         end
 
         @state = new_state if !@locked
-
-        @insn = insn
 
         result == :nop ? nil : [result, @index]
     end

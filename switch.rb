@@ -7,11 +7,10 @@ class Switch
         @right = right
 
         @state = :left
-        @insn = :nop
     end
 
     def process(insn)
-        case @insn
+        case insn
         when :swap_third
             child_insn = :swap_second
         when :swap_second
@@ -26,10 +25,8 @@ class Switch
             toggle
             child_insn = :swap_first
         else
-            child_insn = @insn
-        end         
-
-        @insn = insn
+            child_insn = insn
+        end
         
         pass_on child_insn        
     end

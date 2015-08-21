@@ -67,15 +67,15 @@ class Pada
     end
 
     def run
-        p @insns
+        # p @insns
         pc = 0
         while pc < @insns.size
             insn = @insns[pc]
 
             command, bit = *@tree.process(insn)
 
-            p insn
-            p [command, bit]
+            #p insn
+            #p [command, bit]
 
             if bit
                 byte = @bits[bit, 8].map(&:state).join.to_i(2)
@@ -83,14 +83,17 @@ class Pada
 
             case command
             when :write
+                # p byte.to_s(2).rjust(8,'0')
                 STDOUT << byte.chr
             when :read
                 byte = STDIN.read(1).ord
                 8.times { |i| 
                     @bits[bit + i].state = (byte>>(7-i))&1
                 }
-            when :skip, :jump
-                raise "[BUG] instruction not yet implemented: #{command}"
+            when :skip
+                pc += @bits[bit].state
+            when :jump
+                pc = [pc + jump - 1, 0].max
             end
 
             pc += 1
@@ -107,11 +110,6 @@ class Pada
                 insns << OPERATORS[c]
             end
         end
-
-        insns << :nop
-        insns << :nop
-        insns << :nop
-        insns << :nop
 
         insns
     end
