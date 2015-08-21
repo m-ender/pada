@@ -54,13 +54,12 @@ class Switch
         left || right
     end
 
-    def to_s(depth = 0)
-        padding = ' '*(2**(3-depth)-1)
+    def to_s
         char = @state == :left ? '/' : '\\'
-        children = [@left, @right].map{|s| s.to_s(depth+1).split($/)}
+        children = [@left, @right].map{|s| s.to_s.split($/)}
         width = children[0][0].size
         max_height = children.map(&:size).max
         children = children.map{|s| s.fill(' '*width, s.length...max_height)}.transpose.map{|parts| parts * ' '} * $/
-        padding + char + padding + $/ + children
+        ' '*width + char + ' '*width + $/ + children
     end
 end
