@@ -97,7 +97,7 @@ class Pada
                 when :skip
                     pc += @bits[bit].state
                 when :jump
-                    pc = [pc + jump - 1, 0].max
+                    pc = [pc + jump, 0].max
                 end
             end
 
