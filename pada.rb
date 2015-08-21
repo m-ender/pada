@@ -30,6 +30,9 @@ class Pada
         "#" => :lock,
         "?" => :skip,
         "*" => :jump,
+
+        # Others
+        "d" => :debug
     }
 
     def self.run(src)
@@ -69,28 +72,31 @@ class Pada
     def run
         pc = 0
         while pc < @insns.size
-            puts
-            puts @tree
             insn = @insns[pc]
 
-            command, bit = *@tree.process(insn)
+            if insn == :debug
+                puts
+                puts @tree
+            else
+                command, bit = *@tree.process(insn)
 
-            if bit
-                byte = @bits[bit, 8].map(&:state).join.to_i(2)
-            end
+                if bit
+                    byte = @bits[bit, 8].map(&:state).join.to_i(2)
+                end
 
-            case command
-            when :write
-                STDOUT << byte.chr
-            when :read
-                byte = STDIN.read(1).ord
-                8.times { |i| 
-                    @bits[bit + i].state = (byte>>(7-i))&1
-                }
-            when :skip
-                pc += @bits[bit].state
-            when :jump
-                pc = [pc + jump - 1, 0].max
+                case command
+                when :write
+                    STDOUT << byte.chr
+                when :read
+                    byte = STDIN.read(1).ord
+                    8.times { |i| 
+                        @bits[bit + i].state = (byte>>(7-i))&1
+                    }
+                when :skip
+                    pc += @bits[bit].state
+                when :jump
+                    pc = [pc + jump - 1, 0].max
+                end
             end
 
             pc += 1
