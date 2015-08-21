@@ -30,12 +30,14 @@ class Pada
         "#" => :lock,
         "?" => :skip,
         "*" => :jump,
-
-        # Others
-        "d" => :debug
     }
 
-    def self.run(src)
+    def self.run(src, char)
+        if OPERATORS.has_key? char
+            raise "[ERROR] Invalid debug character #{char}. Clashes with built-in."
+        else
+            OPERATORS[char] = :debug
+        end
         new(src).run
     end
 
@@ -119,4 +121,10 @@ class Pada
 
 end
 
-Pada.run(ARGF.read)
+debug_flag = ARGV[0][/^-d=(.)/]
+if debug_flag
+    char = debug_flag.split('=')[1]
+    ARGV.shift
+end
+
+Pada.run(ARGF.read, char)
