@@ -67,15 +67,13 @@ class Pada
     end
 
     def run
-        # p @insns
         pc = 0
         while pc < @insns.size
+            puts
+            puts @tree
             insn = @insns[pc]
 
             command, bit = *@tree.process(insn)
-
-            #p insn
-            #p [command, bit]
 
             if bit
                 byte = @bits[bit, 8].map(&:state).join.to_i(2)
@@ -83,7 +81,6 @@ class Pada
 
             case command
             when :write
-                # p byte.to_s(2).rjust(8,'0')
                 STDOUT << byte.chr
             when :read
                 byte = STDIN.read(1).ord

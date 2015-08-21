@@ -47,4 +47,8 @@ class Bit
 
         result == :nop ? nil : [result, @index]
     end
+
+    def to_s(depth=3)
+        @state.to_s + $/ + '_' + $/ + (@stack.reverse * $/)
+    end
 end
