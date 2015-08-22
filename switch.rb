@@ -24,6 +24,20 @@ class Switch
         when :swap_two
             toggle
             child_insn = :swap_first
+        when :right_third
+            child_insn = :right_second
+        when :right_second
+            child_insn = :right_first
+        when :right_first
+            @state = :right
+            child_insn = :nop
+        when :left_third
+            child_insn = :left_second
+        when :left_second
+            child_insn = :left_first
+        when :left_first
+            @state = :left
+            child_insn = :nop
         else
             child_insn = insn
         end

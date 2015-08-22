@@ -15,6 +15,14 @@ class Pada
         "Q" => :swap_three,
         "q" => :swap_two,
 
+        "}" => :right_third,
+        "]" => :right_second,
+        ">" => :right_first,
+
+        "{" => :left_third,
+        "[" => :left_second,
+        "<" => :left_first,
+
         # Bit manipulation
         "1" => :set_1,
         "0" => :set_0,
